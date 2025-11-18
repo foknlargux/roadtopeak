@@ -886,6 +886,7 @@
         headerBg: [52, 73, 94],
         text: [44, 62, 80],
         lightGray: [240, 240, 240],
+        border: [200, 200, 200],
       };
 
       // Título
@@ -897,69 +898,76 @@
       doc.setFontSize(11);
       doc.text(`Semana: ${start} - ${end}`, 14, 30);
 
-      let y = 40;
-      const lineHeight = 6;
-      const col1 = 14;
-      const col2 = 80;
-      const col3 = 140;
+      // Configuración de tabla
+      const startX = 14;
+      let startY = 40;
+      const rowHeight = 24;
+      const colWidths = [30, 80, 45, 45];
+      const colTitles = ['Día', 'Entrenamiento en Casa', 'Roca / Notas', 'Suplementos'];
 
       // Encabezado de tabla
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setTextColor(255, 255, 255);
       doc.setFillColor(...colors.headerBg);
-      doc.rect(col1, y, 182, 8, 'F');
-      doc.text('Día', col1 + 2, y + 6);
-      doc.text('Entrenamiento en Casa', col2, y + 6);
-      doc.text('Roca / Suplementos', col3, y + 6);
-      y += 8;
+      let x = startX;
+      colTitles.forEach((title, i) => {
+        doc.rect(x, startY, colWidths[i], 8, 'F');
+        doc.text(title, x + 2, startY + 6);
+        x += colWidths[i];
+      });
+      startY += 8;
 
       // Filas
       Object.entries(summary).forEach(([day, data], idx) => {
         const color = dayColors[dayNames.indexOf(day)];
         const fillColor = idx % 2 === 0 ? colors.lightGray : [255, 255, 255];
         doc.setFillColor(...fillColor);
-        doc.rect(col1, y, 182, 20, 'F');
+        doc.setDrawColor(...colors.border);
+        doc.rect(startX, startY, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'FD');
 
         // Día
+        doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(...colors[color]);
-        doc.text(day, col1 + 2, y + 6);
+        doc.text(day, startX + 2, startY + 6);
 
         // Entrenamiento en Casa
         doc.setFont(undefined, 'normal');
         doc.setTextColor(...colors.text);
         const home = data.training.length ? data.training.join(', ') : '—';
-        const homeLines = doc.splitTextToSize(home, 55);
-        homeLines.forEach((line, i) => doc.text(line, col2, y + 6 + i * lineHeight));
+        const homeLines = doc.splitTextToSize(home, colWidths[1] - 2);
+        homeLines.slice(0, 5).forEach((line, i) => doc.text(line, startX + colWidths[0] + 2, startY + 6 + i * 4));
 
-        // Roca
-        const rock = data.rock.sector ? `Sector: ${data.rock.sector}` : '—';
-        doc.text(rock, col3, y + 6);
+        // Roca + Notas
+        let rockText = data.rock.sector ? data.rock.sector : '—';
+        if (data.rock.notes) rockText += `\n${data.rock.notes}`;
+        const rockLines = doc.splitTextToSize(rockText, colWidths[2] - 2);
+        rockLines.forEach((line, i) => doc.text(line, startX + colWidths[0] + colWidths[1] + 2, startY + 6 + i * 4));
 
         // Suplementos
         const supp = data.supplements.length ? data.supplements.join(', ') : '—';
-        const suppLines = doc.splitTextToSize(supp, 55);
-        suppLines.forEach((line, i) => doc.text(line, col3, y + 12 + i * lineHeight));
+        const suppLines = doc.splitTextToSize(supp, colWidths[3] - 2);
+        suppLines.forEach((line, i) => doc.text(line, startX + colWidths[0] + colWidths[1] + colWidths[2] + 2, startY + 6 + i * 4));
 
-        y += 20;
-        if (y > 250) {
+        startY += rowHeight;
+        if (startY > 250) {
           doc.addPage();
-          y = 20;
+          startY = 20;
         }
       });
 
       // Notas
       if (note) {
-        y += 10;
+        startY += 10;
         doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text('Aclaraciones:', col1, y);
-        y += 6;
+        doc.text('Aclaraciones:', startX, startY);
+        startY += 6;
         doc.setFont(undefined, 'normal');
         const noteLines = doc.splitTextToSize(note, 180);
         noteLines.forEach(line => {
-          doc.text(line, col1, y);
-          y += lineHeight;
+          doc.text(line, startX, startY);
+          startY += 6;
         });
       }
 
